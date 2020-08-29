@@ -1,5 +1,5 @@
 ///! Implementation of a data handler trait to deal with global data
-use std::fmt;
+
 
 pub mod asset_handler;
 pub mod quote_handler;
@@ -9,7 +9,7 @@ pub use asset_handler::AssetHandler;
 pub use quote_handler::QuoteHandler;
 pub use transaction_handler::TransactionHandler;
 
-#[derive(Debug, Copy)]
+#[derive(Debug, Copy, Clone)]
 pub enum DataType {
     Asset,
     Quote,

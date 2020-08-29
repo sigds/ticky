@@ -1,12 +1,17 @@
-use crate::data_handler::DataError;
+
 use std::ops::Neg;
 use std::fmt::{Display, Formatter};
 use std::fmt;
-use std::error::Error;
+
 use chrono::NaiveDate;
 
+use serde::{Serialize, Deserialize};
+
+
+use strum_macros::EnumString;
+
 /// Currency of an amunt of money
-#[derive(Deserialize, Serialize, Debug, Clone, Copy, PartialEq)]
+#[derive(Deserialize, Serialize, Debug, Clone, Copy, PartialEq, EnumString)]
 pub enum Currency {
     AED,
     AFN,
@@ -203,25 +208,25 @@ impl CashAmount {
     pub fn add(
         &mut self,
         cash_amount: CashAmount,
-    ) -> Result<&mut Self, dyn Error> {
+    ) -> Result<&mut Self, ()> {
         if self.currency == cash_amount.currency {
             self.amount += cash_amount.amount;
             Ok(self)
         } else {
-            Err(self)
+            Err(())
         }
     }
 
     pub fn sub(
         &mut self,
         cash_amount: CashAmount,
-    ) -> Result<&mut Self, dyn Error> {
+    ) -> Result<&mut Self, ()> {
         if self.currency == cash_amount.currency {
             self.amount -= cash_amount.amount;
 
             Ok(self)
         } else {
-            Err(self)
+            Err(())
         }
     }
 }

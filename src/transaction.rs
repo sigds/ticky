@@ -1,10 +1,10 @@
-use crate::data_handler::{DataError, DataItem};
+
 use serde::{Deserialize, Serialize};
 use crate::fiat::CashFlow;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 /// Type of transaction
-#[derive(Debug, Copy, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum TransactionType {
     Cash,
     Asset { asset_name: String, position: f64 },
@@ -45,27 +45,31 @@ impl Transaction {
     /// Assign or change transaction's asset_id, if possible
     /// This is often required for transactions on new assets
     pub fn set_asset_name(&mut self, asset_name: String) {
-        self.transaction_type = match self.transaction_type {
+        let new_type = match self.transaction_type {
             TransactionType::Asset {
                 asset_name: _,
                 position,
             } => TransactionType::Asset { asset_name, position },
             TransactionType::Dividend { asset_name: _ } => TransactionType::Dividend { asset_name },
             TransactionType::Interest { asset_name: _ } => TransactionType::Interest { asset_name },
-            _ => self.transaction_type,
-        }
+            _ => { return },
+        };
+
+        self.transaction_type = new_type;
     }
 
     /// Assign new transaction reference, if applicable
     pub fn set_transaction_ref(&mut self, trans_ref: u128) {
-        self.transaction_type = match self.transaction_type {
+        let new_type = match self.transaction_type {
             TransactionType::Tax { transaction_ref: _ } => TransactionType::Tax {
                 transaction_ref: Some(trans_ref),
             },
             TransactionType::Fee { transaction_ref: _ } => TransactionType::Fee {
                 transaction_ref: Some(trans_ref),
             },
-            _ => self.transaction_type,
-        }
+            _ => { return },
+        };
+
+        self.transaction_type = new_type;
     }
 }

@@ -3,7 +3,7 @@ use crate::data_handler::DataError;
 use chrono::offset::TimeZone;
 use chrono::{DateTime, Local, NaiveDate, NaiveDateTime, Utc};
 use std::str::FromStr;
-use crate::fiat::CashFlow;
+use crate::fiat::{CashFlow, Currency};
 
 /// Returns true if some optional String argument is not None and  the value equals a given str reference
 pub fn some_equal(opt: &Option<String>, s: &str) -> bool {
@@ -46,16 +46,16 @@ pub fn i32_to_usize(val: Option<i32>) -> Option<usize> {
 }
 /// Construct cash flow from raw strings
 pub fn raw_to_cash_flow(amount: f64, currency: &str, date: &str) -> Result<CashFlow, DataError> {
-    let currency = Currency::from_str(currency).map_err(|e| DataError::NotFound(e.to_string()))?;
+    let currency = Currency::from_str(currency).map_err(|_e| DataError::NotFound)?;
     let date = NaiveDate::parse_from_str(date, "%Y-%m-%d")
-        .map_err(|e| DataError::NotFound(e.to_string()))?;
+        .map_err(|_e| DataError::NotFound)?;
     Ok(CashFlow::new(amount, currency, date))
 }
 
 /// Convert string to DateTime<Utc>
 pub fn to_time(time: &str) -> Result<DateTime<Utc>, DataError> {
     let time =
-        DateTime::parse_from_rfc3339(time).map_err(|e| DataError::NotFound(e.to_string()))?;
+        DateTime::parse_from_rfc3339(time).map_err(|_e| DataError::NotFound)?;
     let time: DateTime<Utc> = DateTime::from(time);
     Ok(time)
 }

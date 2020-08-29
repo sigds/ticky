@@ -6,10 +6,10 @@ use super::RocksDB;
 use chrono::{Utc, DateTime};
 use rocksdb::{IteratorMode, Direction};
 
-impl TransactionHandler for RocksDB<'_> {
+impl TransactionHandler for RocksDB {
     fn get_transaction_by_id(&mut self, sort_prefix: &str, id: u128) -> Result<Transaction, DataError> {
         let key = self.build_key(
-            DataType::Transaction,
+            &DataType::Transaction,
             &sort_prefix,
             &id.to_string(),
         );
@@ -26,13 +26,13 @@ impl TransactionHandler for RocksDB<'_> {
 
     fn get_latest_transaction(&mut self, sort_prefix: &str) -> Option<Transaction> {
         let quote_prefix = self.build_key(
-            DataType::Transaction,
+            &DataType::Transaction,
             &sort_prefix,
             "",
         );
 
         self.db.iterator(
-            IteratorMode::From(quote_prefix.as_bytes(), Direction::Forward)
+            IteratorMode::From(&quote_prefix, Direction::Forward)
         )
             .next()
             .map(|item|
@@ -46,13 +46,13 @@ impl TransactionHandler for RocksDB<'_> {
 
     fn get_oldest_transaction(&mut self, sort_prefix: &str) -> Option<Transaction> {
         let quote_prefix = self.build_key(
-            DataType::Transaction,
+            &DataType::Transaction,
             &sort_prefix,
             &"\x7f",
         );
 
         self.db.iterator(
-            IteratorMode::From(quote_prefix.as_bytes(), Direction::Forward)
+            IteratorMode::From(&quote_prefix, Direction::Forward)
         )
             .next()
             .map(|item|
@@ -70,62 +70,69 @@ impl TransactionHandler for RocksDB<'_> {
 
     fn update_transaction(&mut self, sort_prefix: &str, transaction: &Transaction) -> Result<(), DataError> {
         let key = self.build_key(
-            DataType::Transaction,
+            &DataType::Transaction,
             &sort_prefix,
             &transaction.id.to_string(),
         );
 
-        match self.db.put(
-            key,
-            bincode::serialize(&transaction).unwrap(),
-        ) {
-            Ok(_) => Ok(()),
-            Err(_) => DataError::InsertFailed,
-        }
+        self.db
+            .put(
+                key,
+                bincode::serialize(&transaction).unwrap(),
+            )
+            .map_err(|_| DataError::InsertFailed)
     }
 
     fn delete_transaction(&mut self, sort_prefix: &str, transaction: &Transaction) -> Result<(), DataError> {
         let key = self.build_key(
-            DataType::Transaction,
+            &DataType::Transaction,
             &sort_prefix,
             &transaction.id.to_string(),
         );
 
-        match self.db.delete(key) {
-            Ok(_) => Ok(()),
-            Err(_) => DataError::DeleteFailed,
-        }
+        self.db
+            .delete(key)
+            .map_err(|_| DataError::DeleteFailed)
     }
 
-    fn transaction_cursor_forward(&mut self, sort_prefix: &str, time: DateTime<Utc>) -> Result<dyn Iterator<Item=Transaction>, DataError> {
+    fn transaction_cursor_forward(&mut self, sort_prefix: &str, time: DateTime<Utc>) -> Box<dyn Iterator<Item=Transaction> + '_> {
         let quote_prefix = self.build_key(
-            DataType::Transaction,
+            &DataType::Transaction,
             &sort_prefix,
             &time.timestamp_nanos().to_string(),
         );
 
-        Ok(
+        Box::new(
             self.db
                 .iterator(
-                    IteratorMode::From(quote_prefix.as_bytes(), Direction::Forward)
+                    IteratorMode::From(&quote_prefix, Direction::Forward)
                 )
-                .map(|item| bincode::deserialize::<Transaction>(&item.1))
+                .filter_map(|item|
+                    bincode::deserialize::<Transaction>(&item.1)
+                        .ok()
+                )
         )
     }
 
-    fn transaction_cursor_reverse(&mut self, sort_prefix: &str, time: DateTime<Utc>) -> Result<dyn Iterator<Item=Transaction>, DataError> {
+    fn transaction_cursor_reverse(&mut self, sort_prefix: &str, time: DateTime<Utc>) -> Box<dyn Iterator<Item=Transaction> + '_> {
         let quote_prefix = self.build_key(
-            DataType::Transaction,
+            &DataType::Transaction,
             &sort_prefix,
             &time.timestamp_nanos().to_string(),
         );
 
-        Ok(
+        let iter =
             self.db
                 .iterator(
-                    IteratorMode::From(quote_prefix.as_bytes(), Direction::Reverse)
+                    IteratorMode::From(&quote_prefix, Direction::Reverse)
                 )
-                .map(|item| bincode::deserialize::<Transaction>(&item.1))
+                .filter_map(|item|
+                    bincode::deserialize::<Transaction>(&item.1)
+                        .ok()
+                );
+
+        Box::new(
+            iter
         )
     }
 }

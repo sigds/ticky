@@ -17,5 +17,3 @@ pub mod helpers;
 pub mod quote;
 pub mod rocksdb_handler;
 pub mod transaction;
-
-pub use currency::Currency;
